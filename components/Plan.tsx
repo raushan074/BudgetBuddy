@@ -1,13 +1,10 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UploadCloud, Bot, FileText, Loader, Info } from 'lucide-react';
+import { UploadCloud, Bot, FileText, Loader, Info, CheckCircle2, XCircle } from 'lucide-react';
 import { analyzeBudgetPlan } from '../services/geminiService';
 import { useAppContext } from '../hooks/useAppContext';
 import Card from './common/Card';
 import Modal from './common/Modal';
-
-// Fix: Removed conflicting 'declare global' for window.aistudio to resolve type errors.
-// The type is expected to be provided by the global execution environment, and redeclaring it here caused a conflict.
 
 const Plan: React.FC = () => {
     const { state, dispatch } = useAppContext();
@@ -18,14 +15,20 @@ const Plan: React.FC = () => {
     const [isApiKeySelected, setIsApiKeySelected] = useState(false);
     const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const checkApiKey = async () => {
-            if (window.aistudio) {
+    const checkApiKeyStatus = async () => {
+        if (window.aistudio) {
+            try {
                 const hasKey = await window.aistudio.hasSelectedApiKey();
                 setIsApiKeySelected(hasKey);
+            } catch (e) {
+                console.error("Error checking for API key", e);
+                setIsApiKeySelected(false);
             }
-        };
-        checkApiKey();
+        }
+    };
+
+    useEffect(() => {
+        checkApiKeyStatus();
     }, []);
 
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -42,21 +45,38 @@ const Plan: React.FC = () => {
             reader.readAsText(file);
         }
     };
+    
+    const handleSelectKey = async () => {
+        if (window.aistudio) {
+            setApiKeyError(null);
+            try {
+                await window.aistudio.openSelectKey();
+                await checkApiKeyStatus(); // Re-check after selection dialog is closed.
+            } catch (e) {
+                console.error("Error opening select key dialog", e);
+                setApiKeyError("Could not open the API Key selection dialog.");
+            }
+        }
+    };
 
     const handleGetFeedback = async () => {
         if (!budgetPlan.content) return;
-
         setApiKeyError(null);
 
-        try {
-             if (window.aistudio && !isApiKeySelected) {
-                await window.aistudio.openSelectKey();
-                setIsApiKeySelected(true); // Assume success to allow immediate API call
-            }
+        let hasKey = isApiKeySelected;
+        if (window.aistudio && !hasKey) {
+            await handleSelectKey();
+            hasKey = await window.aistudio.hasSelectedApiKey();
+        }
 
+        if (!hasKey) {
+            setApiKeyError("You must select a valid API Key to get feedback.");
+            return;
+        }
+
+        try {
             setIsLoading(true);
             setFeedback(null);
-
             const result = await analyzeBudgetPlan(budgetPlan.content);
             setFeedback(result);
             setIsFeedbackModalOpen(true);
@@ -91,13 +111,30 @@ const Plan: React.FC = () => {
                     <input id="budget-plan-upload" type="file" accept=".txt" className="hidden" onChange={handleFileChange} />
                 </div>
 
+                <div className="mt-6 p-4 bg-brand-light-navy/30 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                        {isApiKeySelected ? <CheckCircle2 size={24} className="text-brand-accent flex-shrink-0 mt-0.5" /> : <XCircle size={24} className="text-red-400 flex-shrink-0 mt-0.5"/>}
+                        <div>
+                            <h3 className="font-semibold text-brand-white">API Key Status</h3>
+                            <p className="text-brand-slate text-sm">
+                                {isApiKeySelected ? 'A Gemini API Key is selected.' : 'No Gemini API Key has been selected.'}
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleSelectKey}
+                        className="bg-brand-light-navy text-brand-white font-semibold py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors duration-300 w-full sm:w-auto flex-shrink-0"
+                    >
+                        {isApiKeySelected ? 'Change Key' : 'Select API Key'}
+                    </button>
+                </div>
+
                 <div className="mt-4 p-4 bg-brand-light-navy/30 rounded-lg flex items-start gap-3">
                     <Info size={20} className="text-brand-accent flex-shrink-0 mt-1" />
                     <div>
-                        <h3 className="font-semibold text-brand-white">AI Coach requires an API Key</h3>
+                        <h3 className="font-semibold text-brand-white">Using the AI Coach</h3>
                         <p className="text-brand-slate text-sm">
-                            To use the AI-powered feedback feature, you'll need to select a Gemini API key.
-                            For more information on setup and billing, please refer to the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline text-brand-accent hover:text-brand-accent-dark">official documentation</a>.
+                            The AI Coach requires a Gemini API key. For info on setup and billing, see the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline text-brand-accent hover:text-brand-accent-dark">official documentation</a>.
                         </p>
                     </div>
                 </div>
@@ -136,7 +173,7 @@ const Plan: React.FC = () => {
                                 ) : (
                                     <>
                                         <Bot size={18} />
-                                        {isApiKeySelected ? 'Get AI Feedback' : 'Select Key & Get Feedback'}
+                                        Get AI Feedback
                                     </>
                                 )}
                             </button>
