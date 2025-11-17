@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+dotenv.config();
 
 export const analyzeBudgetPlan = async (planContent: string): Promise<string> => {
   // Proactively check for the API key to provide a clearer and more direct error message.
