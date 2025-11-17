@@ -105,12 +105,19 @@ const Plan: React.FC = () => {
 
             <Modal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} title={modalTitle}>
                 {feedback && (
-                    <div
-                        className="prose prose-invert max-w-none text-brand-light-slate"
-                        dangerouslySetInnerHTML={{
-                             __html: feedback.replace(/\n/g, '<br />')
-                        }}
-                    />
+                    modalTitle.includes('Error') ? (
+                        <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-lg">
+                            <p className="font-bold text-lg text-red-400">Encountered an Issue</p>
+                            <p className="mt-2 text-brand-light-slate">{feedback}</p>
+                        </div>
+                    ) : (
+                        <div
+                            className="prose prose-invert max-w-none text-brand-light-slate"
+                            dangerouslySetInnerHTML={{
+                                __html: feedback.replace(/\n/g, '<br />')
+                            }}
+                        />
+                    )
                 )}
             </Modal>
         </div>
