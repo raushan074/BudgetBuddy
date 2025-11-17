@@ -1,4 +1,7 @@
 
+// Fix: Import specific types from React to resolve 'React' namespace errors.
+import type { ComponentType, Dispatch } from 'react';
+
 export interface Transaction {
   id: string;
   date: string;
@@ -15,7 +18,8 @@ export interface Budget {
 
 export interface Category {
     name: string;
-    icon: React.ComponentType<{ size?: number; className?: string }>;
+    // Fix: Changed React.ComponentType to ComponentType to match the new import.
+    icon: ComponentType<{ size?: number; className?: string }>;
 }
 
 export interface AppState {
@@ -38,5 +42,6 @@ export type AppAction =
 
 export interface AppContextType {
   state: AppState;
-  dispatch: React.Dispatch<AppAction>;
+  // Fix: Changed React.Dispatch to Dispatch to match the new import.
+  dispatch: Dispatch<AppAction>;
 }

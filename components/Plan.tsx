@@ -12,6 +12,7 @@ const Plan: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [feedback, setFeedback] = useState<string | null>(null);
     const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+    const [modalTitle, setModalTitle] = useState('AI Budget Coach Feedback');
 
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -34,12 +35,19 @@ const Plan: React.FC = () => {
         try {
             setIsLoading(true);
             setFeedback(null);
+            setModalTitle('AI Budget Coach Feedback');
             const result = await analyzeBudgetPlan(budgetPlan.content);
             setFeedback(result);
             setIsFeedbackModalOpen(true);
         } catch (error) {
             console.error(error);
-            setFeedback((error as Error).message);
+            const errorMessage = (error as Error).message;
+            if (errorMessage.includes('API Key')) {
+                setModalTitle('API Key Error');
+            } else {
+                setModalTitle('Analysis Error');
+            }
+            setFeedback(errorMessage);
             setIsFeedbackModalOpen(true);
         } finally {
             setIsLoading(false);
@@ -95,7 +103,7 @@ const Plan: React.FC = () => {
                 )}
             </Card>
 
-            <Modal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} title="AI Budget Coach Feedback">
+            <Modal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} title={modalTitle}>
                 {feedback && (
                     <div
                         className="prose prose-invert max-w-none text-brand-light-slate"
