@@ -60,7 +60,13 @@ const App: React.FC = () => {
 
   const navContent = (
     <>
-      <div className="flex items-center justify-center h-20 shadow-md bg-brand-navy/50">
+      <div 
+        className="flex items-center justify-center h-20 shadow-md bg-brand-navy/50 cursor-pointer"
+        onClick={() => {
+          setCurrentView('dashboard');
+          setIsMobileMenuOpen(false);
+        }}
+      >
         <h1 className="text-3xl font-bold text-brand-white">
           Budget<span className="text-brand-accent">Buddy</span>
         </h1>
