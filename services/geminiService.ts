@@ -1,18 +1,8 @@
-
 import { GoogleGenAI } from "@google/genai";
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.warn("Gemini API key not found. Please set the API_KEY environment variable.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
-
 export const analyzeBudgetPlan = async (planContent: string): Promise<string> => {
-  if (!API_KEY) {
-    return "Error: Gemini API key is not configured. Please contact support.";
-  }
+  // Initialize the GoogleGenAI client here to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
   try {
     const prompt = `
@@ -35,6 +25,9 @@ export const analyzeBudgetPlan = async (planContent: string): Promise<string> =>
     return response.text;
   } catch (error) {
     console.error("Error analyzing budget plan with Gemini:", error);
+    if (error instanceof Error && error.message.includes("Requested entity was not found")) {
+        throw new Error("API key not found. Please select a valid API key.");
+    }
     return "Sorry, I encountered an error while analyzing your plan. Please try again later.";
   }
 };
