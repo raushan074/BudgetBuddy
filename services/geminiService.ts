@@ -25,9 +25,6 @@ export const analyzeBudgetPlan = async (planContent: string): Promise<string> =>
     return response.text;
   } catch (error) {
     console.error("Error analyzing budget plan with Gemini:", error);
-    if (error instanceof Error && error.message.includes("Requested entity was not found")) {
-        throw new Error("API key not found. Please select a valid API key.");
-    }
-    return "Sorry, I encountered an error while analyzing your plan. Please try again later.";
+    throw new Error("Sorry, I encountered an error while analyzing your plan. Please try again later.");
   }
 };
