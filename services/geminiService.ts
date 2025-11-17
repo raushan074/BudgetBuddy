@@ -1,11 +1,32 @@
 import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
-dotenv.config();
+
+const MOCK_RESPONSE = `
+### BudgetBuddy AI Mock Feedback
+
+This is a sample analysis because an API key has not been provided. Please set up your \`API_KEY\` environment variable to get live feedback from Gemini.
+
+---
+
+### Strengths
+*   **Comprehensive Categories:** You've done a great job of breaking down your expenses into clear categories. This is the first step to understanding where your money goes!
+*   **Setting Limits:** Actively setting limits for categories like Groceries and Entertainment shows you're being proactive about your spending.
+
+### Areas for Improvement
+*   **Savings Goal:** While you're tracking expenses, there doesn't appear to be a dedicated savings category. It's crucial to "pay yourself first."
+*   **Miscellaneous Spending:** A large "Other" category can sometimes hide impulse buys. Try to break this down further if possible.
+
+### Actionable Tips
+1.  **Automate Savings:** Set up an automatic transfer to a savings account right after you get paid. Even a small amount helps build the habit.
+2.  **The 50/30/20 Rule:** As a guideline, consider allocating 50% of your income to needs, 30% to wants, and 20% to savings and debt repayment. How does your current plan compare?
+3.  **Review and Adjust:** A budget isn't set in stone. Review it monthly to see what's working and where you can adjust.
+`;
+
 
 export const analyzeBudgetPlan = async (planContent: string): Promise<string> => {
-  // Proactively check for the API key to provide a clearer and more direct error message.
+  // If no API key is found, return a mock response for demonstration purposes.
   if (!process.env.API_KEY) {
-    throw new Error("API Key Not Found. This application requires the `API_KEY` environment variable to be set in its execution environment. Please refer to the setup instructions.");
+    console.warn("API key not found. Returning mock data.");
+    return new Promise(resolve => setTimeout(() => resolve(MOCK_RESPONSE), 1000));
   }
 
   try {
