@@ -3,10 +3,11 @@
  * BUDGET BUDDY BACKEND
  * 
  * Setup Instructions:
- * 1. Install dependencies: `npm install express mongoose cors jsonwebtoken bcryptjs dotenv`
+ * 1. Install dependencies: `npm install express mongoose cors jsonwebtoken bcryptjs dotenv google-auth-library`
  * 2. Set environment variables in .env: 
  *    MONGO_URI=your_mongodb_connection_string
  *    JWT_SECRET=your_secret_key
+ *    GOOGLE_CLIENT_ID=your_google_client_id
  *    PORT=5000
  * 3. Run: `node server/server.js`
  */
@@ -16,9 +17,13 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
 const app = express();
+// Initialize Google Auth Client
+// NOTE: You must provide a valid GOOGLE_CLIENT_ID in your .env file
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Allow requests from Vite frontend
 app.use(cors()); 
@@ -150,39 +155,50 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// Simulated OAuth Endpoint for demo purposes
-// In a real production app, this would handle the callback from Google/GitHub
-app.post('/api/auth/oauth-mock', async (req, res) => {
+// Real Google OAuth Endpoint
+app.post('/api/auth/google', async (req, res) => {
     try {
-        const { provider } = req.body; // 'google' or 'github'
-        const email = `demo_${provider}_${Math.floor(Math.random() * 1000)}@example.com`; 
-        // Note: In real app, we'd get email from the provider token.
-        // For this simulated "Connect DB" feature, we'll find or create a fixed demo user for simplicity
-        // OR create a new one every time? Let's use a fixed one for stability of demo.
-        const fixedEmail = `user@${provider}.com`;
+        const { token } = req.body;
+        
+        // 1. Verify the token with Google
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID, 
+        });
+        const payload = ticket.getPayload();
+        
+        const { email, name, picture, sub } = payload;
 
-        let user = await User.findOne({ email: fixedEmail });
+        // 2. Check if user exists in MongoDB
+        let user = await User.findOne({ email });
         
         if (!user) {
+            // 3. Create new user if not exists
             user = new User({
-                name: `Demo ${provider.charAt(0).toUpperCase() + provider.slice(1)} User`,
-                email: fixedEmail,
-                provider: provider,
-                avatar: provider === 'github' 
-                    ? 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png' 
-                    : 'https://lh3.googleusercontent.com/COxitqgJr1sJnIDe8-jiKhxDx1FrYbtRHKJ9z_hELisAlapwE9LUPh6fcXIfb5vwpbMl4xl9H9TRFPc5NOO8Sb3VSgIBrfRYvW6cUA'
+                name,
+                email,
+                avatar: picture,
+                provider: 'google',
+                password: sub // Use Google ID as internal password placeholder (not used for login)
             });
+            await user.save();
+        } else if (user.provider !== 'google') {
+            // Optional: Link accounts or reject
+            // For now, we update the provider or just log them in
+            user.provider = 'google'; // Switch to google or handle merging
+            user.avatar = picture;
             await user.save();
         }
 
-        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET || 'default_secret');
+        // 4. Issue App Token
+        const appToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET || 'default_secret');
         res.send({ 
             user: toClient(user), 
-            token 
+            token: appToken 
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).send({ error: 'Server error' });
+        console.error("Google Auth Error:", error);
+        res.status(400).send({ error: 'Google authentication failed' });
     }
 });
 

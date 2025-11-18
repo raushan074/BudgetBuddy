@@ -7,7 +7,8 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  loginWithProvider: (provider: 'google' | 'github') => Promise<void>;
+  loginWithProvider: (provider: 'google' | 'github') => Promise<void>; // Kept for GitHub/Legacy
+  loginWithGoogle: (token: string) => Promise<void>; // New Real Google Auth
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -79,6 +80,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
   };
 
+  const loginWithGoogle = async (token: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+        const response = await api.auth.google(token);
+        saveSession(response.user, response.token);
+    } catch (err) {
+         setError(err instanceof Error ? err.message : 'Google Login failed');
+         throw err;
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('budget_buddy_user');
@@ -87,7 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, loginWithProvider, logout, isLoading, error, setError }}>
+    <AuthContext.Provider value={{ user, login, register, loginWithProvider, loginWithGoogle, logout, isLoading, error, setError }}>
       {children}
     </AuthContext.Provider>
   );

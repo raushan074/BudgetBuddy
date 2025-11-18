@@ -1,18 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, CheckCircle, Shield, ArrowRight, UserPlus, LogIn, User, Github } from 'lucide-react';
+import { Wallet, CheckCircle, Shield, ArrowRight, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-// Simple Google Icon component
-const GoogleIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M21.35 11.1H12v2.8h5.305c-.225 1.1-.9 2.025-1.92 2.71v2.25h3.105C20.305 17.175 21.35 14.445 21.35 11.1zM5.655 15.135l-3.105 2.25C4.11 20.475 7.77 22.5 12 22.5c2.625 0 4.83-.87 6.435-2.355l-3.105-2.25c-.87.585-1.98.93-3.33.93-2.535 0-4.68-1.71-5.445-4.005H3.405v2.28c1.56 3.09 4.755 5.205 8.595 5.205zM12 5.4c1.425 0 2.7.495 3.705 1.455l2.79-2.79C16.815 2.46 14.61 1.5 12 1.5c-3.84 0-7.035 2.115-8.595 5.205l3.105 2.28C7.32 6.69 9.465 5.4 12 5.4zM3.405 9.945v4.08l3.105-2.25C6.42 11.43 6.375 10.98 6.375 10.5c0-.48.045-.93.135-1.365L3.405 6.9C1.845 9.99 1.845 14.01 3.405 9.945z" fill="currentColor" />
-  </svg>
-);
+// IMPORTANT: REPLACE THIS WITH YOUR ACTUAL GOOGLE CLIENT ID FROM GOOGLE CLOUD CONSOLE
+// Example format: "123456789-abcdefg.apps.googleusercontent.com"
+const GOOGLE_CLIENT_ID = "236694838829-9ad88go06qqaf9nh00corvlnbu7unc2q.apps.googleusercontent.com";
 
 const Login: React.FC = () => {
-  const { login, register, loginWithProvider, isLoading, error, setError } = useAuth();
+  const { login, register, loginWithGoogle, isLoading, error, setError } = useAuth();
   const [isRegistering, setIsRegistering] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -20,6 +17,33 @@ const Login: React.FC = () => {
       email: '',
       password: ''
   });
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    /* global google */
+    if ((window as any).google) {
+        try {
+            (window as any).google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleResponse
+            });
+            
+            // Render the button inside the div with id "googleButton"
+            (window as any).google.accounts.id.renderButton(
+                document.getElementById("googleButton"),
+                { theme: "outline", size: "large", width: "100%" }
+            );
+        } catch (e) {
+            console.error("Google Sign-In initialization failed", e);
+        }
+    }
+  }, []);
+
+  const handleGoogleResponse = (response: any) => {
+      if (response.credential) {
+          loginWithGoogle(response.credential);
+      }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -95,24 +119,11 @@ const Login: React.FC = () => {
                     {error}
                 </div>
             )}
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-                <button 
-                    onClick={() => loginWithProvider('google')}
-                    disabled={isLoading}
-                    className="flex items-center justify-center gap-2 p-2 rounded-md bg-brand-light-navy text-brand-white hover:bg-brand-slate/20 transition-colors border border-brand-light-slate/30"
-                >
-                    <GoogleIcon />
-                    <span>Google</span>
-                </button>
-                <button 
-                    onClick={() => loginWithProvider('github')}
-                    disabled={isLoading}
-                    className="flex items-center justify-center gap-2 p-2 rounded-md bg-brand-light-navy text-brand-white hover:bg-brand-slate/20 transition-colors border border-brand-light-slate/30"
-                >
-                    <Github size={20} />
-                    <span>GitHub</span>
-                </button>
+            
+            {/* OAuth Buttons */}
+            <div className="grid grid-cols-1 gap-3 mb-6">
+                {/* GOOGLE BUTTON CONTAINER */}
+                <div id="googleButton" className="w-full flex justify-center"></div>
             </div>
 
             <div className="relative mb-6">
@@ -120,7 +131,7 @@ const Login: React.FC = () => {
                     <div className="w-full border-t border-brand-light-navy"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-brand-navy text-brand-slate">Or continue with</span>
+                    <span className="px-2 bg-brand-navy text-brand-slate">Or with email</span>
                 </div>
             </div>
 

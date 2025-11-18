@@ -39,7 +39,18 @@ export const api = {
             });
             return handleResponse(response);
         },
+        // Replaced mock with real Google call
+        google: async (token: string): Promise<AuthResponse> => {
+            const response = await fetch(`${API_URL}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            return handleResponse(response);
+        },
+        // Kept for GitHub simulation if needed, or can be removed
         loginWithProvider: async (provider: 'google' | 'github'): Promise<AuthResponse> => {
+             // Fallback for GitHub or if Google fails gracefully
             const response = await fetch(`${API_URL}/auth/oauth-mock`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
