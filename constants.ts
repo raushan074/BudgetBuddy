@@ -1,5 +1,5 @@
 
-import { ShoppingCart, Home, Car, Utensils, Shirt, Film, Heart, GraduationCap, Gift, DollarSign } from 'lucide-react';
+import { ShoppingCart, Home, Car, Utensils, Shirt, Film, Heart, GraduationCap, Gift, DollarSign, CalendarClock } from 'lucide-react';
 import type { Category } from './types';
 
 export const CATEGORIES: Category[] = [
@@ -13,5 +13,51 @@ export const CATEGORIES: Category[] = [
     { name: 'Education', icon: GraduationCap },
     { name: 'Gifts', icon: Gift },
     { name: 'Salary', icon: DollarSign },
+    { name: 'Bills', icon: CalendarClock },
     { name: 'Other', icon: DollarSign },
 ];
+
+// Smart Auto-Categorization Rules
+// Keys are lowercase keywords to match in description
+export const AUTO_CATEGORY_RULES: Record<string, string> = {
+    'walmart': 'Groceries',
+    'kroger': 'Groceries',
+    'whole foods': 'Groceries',
+    'market': 'Groceries',
+    'rent': 'Housing',
+    'mortgage': 'Housing',
+    'lease': 'Housing',
+    'electric': 'Housing',
+    'water': 'Housing',
+    'internet': 'Housing',
+    'uber': 'Transportation',
+    'lyft': 'Transportation',
+    'gas': 'Transportation',
+    'fuel': 'Transportation',
+    'shell': 'Transportation',
+    'mcdonalds': 'Food',
+    'starbucks': 'Food',
+    'restaurant': 'Food',
+    'pizza': 'Food',
+    'coffee': 'Food',
+    'netflix': 'Entertainment',
+    'spotify': 'Entertainment',
+    'cinema': 'Entertainment',
+    'movie': 'Entertainment',
+    'game': 'Entertainment',
+    'zara': 'Apparel',
+    'nike': 'Apparel',
+    'clothing': 'Apparel',
+    'pharmacy': 'Health',
+    'doctor': 'Health',
+    'hospital': 'Health',
+    'gym': 'Health',
+    'course': 'Education',
+    'tuition': 'Education',
+    'book': 'Education',
+    'udemy': 'Education',
+    'salary': 'Salary',
+    'paycheck': 'Salary',
+    'freelance': 'Salary',
+    'dividend': 'Salary',
+};

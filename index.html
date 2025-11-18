@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -10,22 +10,52 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        /* Light Mode Defaults */
+        --color-brand-dark: #f1f5f9; /* Slate 100 */
+        --color-brand-navy: #ffffff; /* White */
+        --color-brand-light-navy: #e2e8f0; /* Slate 200 */
+        --color-brand-slate: #64748b; /* Slate 500 */
+        --color-brand-light-slate: #475569; /* Slate 600 */
+        --color-brand-white: #0f172a; /* Slate 900 */
+        --color-brand-accent: #0d9488; /* Teal 600 */
+        --color-brand-accent-dark: #0f766e; /* Teal 700 */
+      }
+
+      .dark {
+        /* Dark Mode Defaults */
+        --color-brand-dark: #0a192f;
+        --color-brand-navy: #1e293b;
+        --color-brand-light-navy: #334155;
+        --color-brand-slate: #94a3b8;
+        --color-brand-light-slate: #cbd5e1;
+        --color-brand-white: #e2e8f0;
+        --color-brand-accent: #64ffda;
+        --color-brand-accent-dark: #10b981;
+      }
+      
+      body {
+        transition: background-color 0.3s, color 0.3s;
+      }
+    </style>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
-              'brand-dark': '#0a192f',
-              'brand-navy': '#1e293b',
-              'brand-light-navy': '#334155',
-              'brand-slate': '#94a3b8',
-              'brand-light-slate': '#cbd5e1',
-              'brand-white': '#e2e8f0',
-              'brand-accent': '#64ffda',
-              'brand-accent-dark': '#10b981',
+              'brand-dark': 'var(--color-brand-dark)',
+              'brand-navy': 'var(--color-brand-navy)',
+              'brand-light-navy': 'var(--color-brand-light-navy)',
+              'brand-slate': 'var(--color-brand-slate)',
+              'brand-light-slate': 'var(--color-brand-light-slate)',
+              'brand-white': 'var(--color-brand-white)',
+              'brand-accent': 'var(--color-brand-accent)',
+              'brand-accent-dark': 'var(--color-brand-accent-dark)',
             },
           },
         },
@@ -35,12 +65,13 @@
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1",
     "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
     "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0"
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
   }
 }
 </script>

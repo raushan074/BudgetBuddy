@@ -1,26 +1,57 @@
-import React, { useState, useMemo, ChangeEvent } from 'react';
+
+import React, { useState, useMemo, ChangeEvent, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit, Trash2, Upload, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Download, TrendingUp, Sparkles, Search } from 'lucide-react';
 
 import { useAppContext } from '../hooks/useAppContext';
 import type { Transaction } from '../types';
 import Modal from './common/Modal';
 import Card from './common/Card';
-import { CATEGORIES } from '../constants';
-
+import { CATEGORIES, AUTO_CATEGORY_RULES } from '../constants';
 
 const TransactionForm: React.FC<{
     onClose: () => void;
     transaction?: Transaction | null;
-}> = ({ onClose, transaction }) => {
+    initialType?: 'income' | 'expense';
+}> = ({ onClose, transaction, initialType = 'expense' }) => {
     const { dispatch } = useAppContext();
+    const [autoCatTriggered, setAutoCatTriggered] = useState(false);
+    
+    // Determine default category based on type
+    const defaultCategory = useMemo(() => {
+        if (transaction) return transaction.category;
+        return initialType === 'income' ? 'Salary' : CATEGORIES[0].name;
+    }, [transaction, initialType]);
+
     const [formData, setFormData] = useState<Omit<Transaction, 'id'>>({
         date: transaction?.date || new Date().toISOString().split('T')[0],
         description: transaction?.description || '',
         amount: transaction?.amount || 0,
-        type: transaction?.type || 'expense',
-        category: transaction?.category || CATEGORIES[0].name,
+        type: transaction?.type || initialType,
+        category: defaultCategory,
     });
+
+    // Auto-Categorization Logic
+    useEffect(() => {
+        if (transaction) return; // Don't auto-cat on edit mode to allow manual corrections
+        
+        const descLower = formData.description.toLowerCase();
+        for (const [keyword, category] of Object.entries(AUTO_CATEGORY_RULES)) {
+            if (descLower.includes(keyword)) {
+                // Only switch if the category matches the current type (income/expense) roughly
+                // Or just switch and let user correct. Simple switch is better UX usually.
+                setFormData(prev => {
+                    if (prev.category !== category) {
+                        setAutoCatTriggered(true);
+                        setTimeout(() => setAutoCatTriggered(false), 2000);
+                        return { ...prev, category };
+                    }
+                    return prev;
+                });
+                break;
+            }
+        }
+    }, [formData.description, transaction]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -38,10 +69,31 @@ const TransactionForm: React.FC<{
     };
     
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 relative">
+            <AnimatePresence>
+                {autoCatTriggered && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-0 right-0 -mt-8 bg-brand-accent/10 text-brand-accent text-xs px-2 py-1 rounded-full flex items-center gap-1"
+                    >
+                        <Sparkles size={12} />
+                        Auto-categorized!
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <div>
                 <label className="block text-sm font-medium text-brand-slate mb-1">Description</label>
-                <input type="text" name="description" value={formData.description} onChange={handleChange} required className="w-full bg-brand-light-navy border-brand-light-navy rounded-md p-2 text-brand-white focus:ring-2 focus:ring-brand-accent focus:outline-none" />
+                <input 
+                    type="text" 
+                    name="description" 
+                    value={formData.description} 
+                    onChange={handleChange} 
+                    required 
+                    placeholder="e.g., Netflix, Uber, Groceries..."
+                    className="w-full bg-brand-light-navy border-brand-light-navy rounded-md p-2 text-brand-white focus:ring-2 focus:ring-brand-accent focus:outline-none" 
+                />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -82,6 +134,15 @@ const Transactions: React.FC = () => {
     const { state, dispatch } = useAppContext();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const [initialFormType, setInitialFormType] = useState<'income' | 'expense'>('expense');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filter transactions based on search query
+    const filteredTransactions = useMemo(() => {
+        return state.transactions.filter(t => 
+            t.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [state.transactions, searchQuery]);
 
     const handleEdit = (transaction: Transaction) => {
         setEditingTransaction(transaction);
@@ -96,12 +157,19 @@ const Transactions: React.FC = () => {
     
     const handleAddNew = () => {
         setEditingTransaction(null);
+        setInitialFormType('expense');
+        setIsModalOpen(true);
+    };
+
+    const handleAddIncome = () => {
+        setEditingTransaction(null);
+        setInitialFormType('income');
         setIsModalOpen(true);
     };
 
     const handleExport = () => {
         const headers = "id,date,description,amount,type,category\n";
-        const csv = state.transactions.map(t => `${t.id},${t.date},"${t.description}",${t.amount},${t.type},${t.category}`).join("\n");
+        const csv = filteredTransactions.map(t => `${t.id},${t.date},"${t.description}",${t.amount},${t.type},${t.category}`).join("\n");
         const blob = new Blob([headers + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -125,8 +193,9 @@ const Transactions: React.FC = () => {
             const rows = text.split('\n').slice(1);
             const importedTransactions: Transaction[] = rows.map(row => {
                 const [id, date, description, amount, type, category] = row.split(',');
+                if(!description) return null;
                 return { id: id || new Date().toISOString(), date, description: description.replace(/"/g, ''), amount: parseFloat(amount), type: type as 'income' | 'expense', category };
-            }).filter(t => t.date && t.description && !isNaN(t.amount));
+            }).filter((t): t is Transaction => t !== null && !!t.date && !!t.description && !isNaN(t.amount));
             if (importedTransactions.length > 0) {
                  dispatch({ type: 'IMPORT_TRANSACTIONS', payload: importedTransactions });
             }
@@ -136,22 +205,40 @@ const Transactions: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <h1 className="text-4xl font-bold text-brand-white">Transactions</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                      <label htmlFor="import-csv" className="cursor-pointer bg-brand-light-navy text-brand-white font-semibold py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors duration-300 flex items-center gap-2">
-                        <Upload size={18} /> Import
+                        <Upload size={18} /> <span className="hidden sm:inline">Import</span>
                     </label>
                     <input id="import-csv" type="file" accept=".csv" className="hidden" onChange={handleImport} />
 
                     <button onClick={handleExport} className="bg-brand-light-navy text-brand-white font-semibold py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors duration-300 flex items-center gap-2">
-                        <Download size={18} /> Export
+                        <Download size={18} /> <span className="hidden sm:inline">Export</span>
+                    </button>
+
+                    <div className="h-8 w-px bg-brand-light-navy mx-1 hidden sm:block"></div>
+
+                    <button onClick={handleAddIncome} className="bg-emerald-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-emerald-700 transition-colors duration-300 flex items-center gap-2">
+                        <TrendingUp size={18} /> Add Income
                     </button>
 
                     <button onClick={handleAddNew} className="bg-brand-accent text-brand-dark font-semibold py-2 px-4 rounded-md hover:bg-brand-accent-dark transition-colors duration-300 flex items-center gap-2">
                         <Plus size={18} /> Add New
                     </button>
                 </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-slate" size={20} />
+                <input 
+                    type="text" 
+                    placeholder="Search transactions..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-brand-navy border border-brand-light-navy rounded-lg py-3 pl-10 pr-4 text-brand-white focus:ring-2 focus:ring-brand-accent focus:outline-none shadow-sm placeholder:text-brand-slate/50 transition-all"
+                />
             </div>
 
             <Card className="overflow-x-auto">
@@ -167,7 +254,7 @@ const Transactions: React.FC = () => {
                     </thead>
                     <tbody>
                         <AnimatePresence>
-                            {state.transactions.map((t, index) => {
+                            {filteredTransactions.map((t, index) => {
                                 const categoryInfo = CATEGORIES.find(c => c.name === t.category);
                                 const Icon = categoryInfo ? categoryInfo.icon : CATEGORIES.find(c=>c.name==='Other')!.icon;
                                 return (
@@ -199,10 +286,19 @@ const Transactions: React.FC = () => {
                         </AnimatePresence>
                     </tbody>
                 </table>
+                {filteredTransactions.length === 0 && (
+                    <div className="p-8 text-center text-brand-slate">
+                        {searchQuery ? 'No transactions match your search.' : 'No transactions found. Start adding some!'}
+                    </div>
+                )}
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}>
-                <TransactionForm onClose={() => setIsModalOpen(false)} transaction={editingTransaction} />
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingTransaction ? 'Edit Transaction' : (initialFormType === 'income' ? 'Add Income' : 'Add Transaction')}>
+                <TransactionForm 
+                    onClose={() => setIsModalOpen(false)} 
+                    transaction={editingTransaction} 
+                    initialType={initialFormType}
+                />
             </Modal>
         </div>
     );
